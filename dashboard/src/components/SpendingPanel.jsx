@@ -1,0 +1,73 @@
+import { useState, useMemo } from 'react';
+import TransactionTable from './TransactionTable';
+import CategoryDonut from './CategoryDonut';
+
+const TABS = [
+  { id: 'debit-tx', label: 'Debit Orders' },
+  { id: 'debit-cat', label: 'Debit Categories' },
+  { id: 'expense-tx', label: 'Expenses' },
+  { id: 'expense-cat', label: 'Expense Categories' },
+];
+
+function buildCategoryData(transactions) {
+  const map = {};
+  transactions.forEach(tx => {
+    const key = tx.category;
+    map[key] = (map[key] || 0) + Math.abs(tx.amount);
+  });
+  return Object.entries(map)
+    .map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }))
+    .sort((a, b) => b.value - a.value);
+}
+
+export default function SpendingPanel({ transactions }) {
+  const [activeTab, setActiveTab] = useState('debit-tx');
+
+  const debitOrders = useMemo(
+    () => transactions.filter(t => t.isRecurring && t.type === 'Expense'),
+    [transactions]
+  );
+  const normalExpenses = useMemo(
+    () => transactions.filter(t => !t.isRecurring && t.type === 'Expense'),
+    [transactions]
+  );
+  const debitCategories = useMemo(() => buildCategoryData(debitOrders), [debitOrders]);
+  const expenseCategories = useMemo(() => buildCategoryData(normalExpenses), [normalExpenses]);
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+      {/* Tab header */}
+      <div className="flex border-b border-gray-100 px-4 pt-4 gap-1 flex-wrap">
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`text-xs font-semibold px-3 py-2 rounded-t-lg transition-colors whitespace-nowrap ${
+              activeTab === tab.id
+                ? 'bg-slate-900 text-white'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 p-4">
+        {activeTab === 'debit-tx' && (
+          <TransactionTable transactions={debitOrders} emptyText="No debit orders this month" />
+        )}
+        {activeTab === 'debit-cat' && (
+          <CategoryDonut data={debitCategories} />
+        )}
+        {activeTab === 'expense-tx' && (
+          <TransactionTable transactions={normalExpenses} emptyText="No expenses this month" />
+        )}
+        {activeTab === 'expense-cat' && (
+          <CategoryDonut data={expenseCategories} />
+        )}
+      </div>
+    </div>
+  );
+}

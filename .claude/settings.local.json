@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(npx --yes playwright --version)",
+      "Bash(cd /tmp)",
+      "Bash(node_modules/.bin/playwright install *)",
+      "Bash(node screenshot.mjs)",
+      "Read(//c/Users/snxop/AppData/Local/Temp/**)",
+      "Bash(ls /tmp/dashboard.png 2>/dev/null && echo \"exists\" || echo \"not found\")",
+      "Read(//c/tmp/**)",
+      "PowerShell(Copy-Item \"C:\\\\Users\\\\snxop\\\\OneDrive\\\\Desktop\\\\CashflowBudget\\\\Transactions.csv\" \"C:\\\\Users\\\\snxop\\\\OneDrive\\\\Desktop\\\\CashflowBudget\\\\dashboard\\\\public\\\\Transactions.csv\")",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
+      "Bash(ls /tmp/node_modules/ 2>/dev/null | head -20 || echo \"No node_modules at /tmp\")",
+      "Read(//tmp/**)",
+      "Bash(node -e \"console.log\\(require\\('path'\\).resolve\\('/tmp'\\)\\)\")",
+      "Bash(node -e \"import\\('/tmp/node_modules/playwright/index.mjs'\\).then\\(m => console.log\\('ok', Object.keys\\(m\\)\\)\\).catch\\(e => console.error\\('fail', e.message\\)\\)\")",
+      "Bash(python3 -c \"import subprocess; r = subprocess.run\\(['cygpath', '-w', '/tmp'], capture_output=True, text=True\\); print\\(r.stdout\\)\")",
+      "Bash(cygpath -w /tmp)",
+      "Bash(npm install *)"
+    ]
+  }
+}
