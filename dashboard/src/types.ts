@@ -7,6 +7,13 @@ export interface Transaction {
   isRecurring: boolean;
   type: 'Income' | 'Expense';
   category: string;
+  bankAccountId: number;
+}
+
+export interface BankAccount {
+  id: number;
+  name: string;
+  accountNo: string;
 }
 
 export interface CategoryData {

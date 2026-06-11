@@ -20,7 +20,8 @@
       "Bash(python3 -c \"import subprocess; r = subprocess.run\\(['cygpath', '-w', '/tmp'], capture_output=True, text=True\\); print\\(r.stdout\\)\")",
       "Bash(cygpath -w /tmp)",
       "Bash(npm install *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(node -e ' *)"
     ]
   }
 }

@@ -1,21 +1,13 @@
-import type { Transaction } from '../types';
+import * as XLSX from 'xlsx';
+import type { Transaction, BankAccount } from '../types';
+
+// ─── Classification helpers ────────────────────────────────────────────────
 
 type Category =
-  | 'Income'
-  | 'Insurance & Loans'
-  | 'Education'
-  | 'Rent & Housing'
-  | 'Fuel'
-  | 'Groceries'
-  | 'Utilities'
-  | 'Car & Repairs'
-  | 'Food & Dining'
-  | 'Family & Transfers'
-  | 'Shopping'
-  | 'Loan Repayments'
-  | 'Fees & Airtime'
-  | 'Cash Withdrawals'
-  | 'Other';
+  | 'Income' | 'Insurance & Loans' | 'Education' | 'Rent & Housing'
+  | 'Fuel' | 'Groceries' | 'Utilities' | 'Car & Repairs' | 'Food & Dining'
+  | 'Family & Transfers' | 'Shopping' | 'Loan Repayments' | 'Fees & Airtime'
+  | 'Cash Withdrawals' | 'Other';
 
 function classifyCategory(description: string, amount: number): Category {
   const d = description.toLowerCase();
@@ -107,8 +99,7 @@ function classifyCategory(description: string, amount: number): Category {
   ) return 'Fees & Airtime';
   if (d.includes('autobank cash') || d.includes('cash with')) return 'Cash Withdrawals';
   if (
-    d.includes('electricity') || d.includes('lesedi local') || d.includes('midvaal') ||
-    d.includes('municipality')
+    d.includes('lesedi local') || d.includes('midvaal') || d.includes('municipality')
   ) return 'Utilities';
   return 'Other';
 }
@@ -133,54 +124,19 @@ function detectRecurring(description: string, amount: number): boolean {
   );
 }
 
-export function parseStandardBankCSV(csvText: string): Transaction[] {
-  const clean = csvText.replace(/^﻿/, '').replace(/^ï»¿/, '');
-  const lines = clean.split(/\r?\n/).filter(l => l.trim());
+// ─── Excel serial date → "MMM-YY" ─────────────────────────────────────────
 
-  if (lines.length < 2) return [];
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-  const header = lines[0].split(';').map(h => h.trim().toLowerCase());
-  const col = (name: string) => header.indexOf(name);
-
-  const idCol = col('id');
-  const dateCol = col('date');
-  const descCol = col('description');
-  const payMonthCol = col('paymonth');
-  const amountCol = col('amount');
-
-  const getField = (row: string[], idx: number, fallback = '') =>
-    idx >= 0 ? (row[idx] ?? fallback) : fallback;
-
-  const transactions: Transaction[] = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const parts = lines[i].split(';');
-    if (parts.length < 4) continue;
-
-    const rawAmount = parseFloat(getField(parts, amountCol, '0').replace(',', '.'));
-    if (isNaN(rawAmount)) continue;
-
-    const rawDate = getField(parts, dateCol, '').trim();
-    const date = rawDate.split(' ')[0];
-
-    const description = getField(parts, descCol, '').trim();
-    const payMonth = getField(parts, payMonthCol, '').trim();
-    const id = parseInt(getField(parts, idCol, String(i)), 10) || i;
-
-    if (!date || !description || !payMonth) continue;
-
-    const isRecurring = detectRecurring(description, rawAmount);
-    const type: Transaction['type'] = rawAmount > 0 ? 'Income' : 'Expense';
-    const category = classifyCategory(description, rawAmount);
-
-    transactions.push({ id, date, description, payMonth, amount: rawAmount, isRecurring, type, category });
-  }
-
-  return transactions;
+function excelSerialToPayMonth(serial: number): string {
+  // Excel serial day 1 = Jan 1 1900; JS epoch = Jan 1 1970 (25569 days later)
+  const date = new Date(Math.round((serial - 25569) * 86400 * 1000));
+  return `${MONTH_NAMES[date.getUTCMonth()]}-${String(date.getUTCFullYear()).slice(2)}`;
 }
 
+// ─── Pay-month sort ────────────────────────────────────────────────────────
+
 export function extractPayMonths(transactions: Transaction[]): string[] {
-  const order = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const seen = new Set(transactions.map(t => t.payMonth));
   return [...seen].sort((a, b) => {
     const [am, ay] = a.split('-');
@@ -188,6 +144,86 @@ export function extractPayMonths(transactions: Transaction[]): string[] {
     const ay2 = parseInt(ay, 10);
     const by2 = parseInt(by, 10);
     if (ay2 !== by2) return ay2 - by2;
-    return order.indexOf(am) - order.indexOf(bm);
+    return MONTH_NAMES.indexOf(am) - MONTH_NAMES.indexOf(bm);
   });
+}
+
+// ─── Row types from XLSX.utils.sheet_to_json ──────────────────────────────
+
+interface TxRow {
+  Id: number;
+  Date: string;
+  Description: string;
+  Account?: string;
+  SpendingGroup?: string;
+  Category?: string;
+  PayMonth: number | string;
+  Amount: string | number;
+  BankAccountId: number;
+}
+
+interface AccountRow {
+  Id: number;
+  Name: string;
+  AccountNo: number | string;
+  AccountTypeId: number;
+}
+
+// ─── Main parser ───────────────────────────────────────────────────────────
+
+export interface ParsedSpreadsheet {
+  transactions: Transaction[];
+  bankAccounts: BankAccount[];
+  payMonths: string[];
+}
+
+export function parseSpreadsheet(buffer: Uint8Array): ParsedSpreadsheet {
+  const wb = XLSX.read(buffer, { type: 'array' });
+
+  // Bank Accounts sheet
+  const baSheet = wb.Sheets['Bank Accounts'];
+  const accountRows = XLSX.utils.sheet_to_json<AccountRow>(baSheet);
+  const bankAccounts: BankAccount[] = accountRows.map(r => ({
+    id: r.Id,
+    name: r.Name,
+    accountNo: String(r.AccountNo),
+  }));
+
+  // Transactions sheet
+  const txSheet = wb.Sheets['Transactions'];
+  const txRows = XLSX.utils.sheet_to_json<TxRow>(txSheet);
+
+  const transactions: Transaction[] = [];
+
+  for (const row of txRows) {
+    // Skip rows where PayMonth is not an Excel serial number
+    if (typeof row.PayMonth !== 'number') continue;
+
+    const rawAmount = parseFloat(String(row.Amount).replace(',', '.'));
+    if (isNaN(rawAmount)) continue;
+
+    const date = String(row.Date ?? '').split(' ')[0];
+    const description = String(row.Description ?? '').trim();
+    if (!date || !description) continue;
+
+    const payMonth = excelSerialToPayMonth(row.PayMonth);
+    const isRecurring = detectRecurring(description, rawAmount);
+    const type: Transaction['type'] = rawAmount > 0 ? 'Income' : 'Expense';
+    const category = classifyCategory(description, rawAmount);
+
+    transactions.push({
+      id: row.Id,
+      date,
+      description,
+      payMonth,
+      amount: rawAmount,
+      isRecurring,
+      type,
+      category,
+      bankAccountId: row.BankAccountId,
+    });
+  }
+
+  const payMonths = extractPayMonths(transactions);
+  return { transactions, bankAccounts, payMonths };
 }
