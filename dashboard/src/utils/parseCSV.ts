@@ -1,7 +1,23 @@
-// Parses the Standard Bank CSV export (semicolon-delimited, BOM-prefixed)
-// Expected columns: Id;Date;Description;Account;SpendingGroup;Category;PayMonth;Amount;BankAccountId
+import type { Transaction } from '../types';
 
-function classifyCategory(description, amount) {
+type Category =
+  | 'Income'
+  | 'Insurance & Loans'
+  | 'Education'
+  | 'Rent & Housing'
+  | 'Fuel'
+  | 'Groceries'
+  | 'Utilities'
+  | 'Car & Repairs'
+  | 'Food & Dining'
+  | 'Family & Transfers'
+  | 'Shopping'
+  | 'Loan Repayments'
+  | 'Fees & Airtime'
+  | 'Cash Withdrawals'
+  | 'Other';
+
+function classifyCategory(description: string, amount: number): Category {
   const d = description.toLowerCase();
   if (amount > 0) {
     if (
@@ -89,9 +105,7 @@ function classifyCategory(description, amount) {
     d.includes('telephone account') || d.includes('membership fee') ||
     d.includes('immediate payment') || d.includes('90 day statement')
   ) return 'Fees & Airtime';
-  if (
-    d.includes('autobank cash') || d.includes('cash with')
-  ) return 'Cash Withdrawals';
+  if (d.includes('autobank cash') || d.includes('cash with')) return 'Cash Withdrawals';
   if (
     d.includes('electricity') || d.includes('lesedi local') || d.includes('midvaal') ||
     d.includes('municipality')
@@ -99,7 +113,7 @@ function classifyCategory(description, amount) {
   return 'Other';
 }
 
-function detectRecurring(description, amount) {
+function detectRecurring(description: string, amount: number): boolean {
   const d = description.toLowerCase();
   const abs = Math.abs(amount);
   return (
@@ -112,7 +126,6 @@ function detectRecurring(description, amount) {
     d.includes('silveroaks') || d.includes('moment payco') ||
     d.includes('asset guarding') || d.includes('overdraft service fee') ||
     d.includes('avbob') || d.includes('sbib-insurhop') ||
-    // Named recurring transfers
     d.includes('lesotho-home') ||
     (d.includes('lynessa') || (d.includes('savu') && d.includes('piano'))) ||
     ((d.includes('3 rivers') || d.includes('3rivers')) && abs >= 7000) ||
@@ -120,16 +133,14 @@ function detectRecurring(description, amount) {
   );
 }
 
-export function parseStandardBankCSV(csvText) {
-  // Strip BOM
+export function parseStandardBankCSV(csvText: string): Transaction[] {
   const clean = csvText.replace(/^﻿/, '').replace(/^ï»¿/, '');
   const lines = clean.split(/\r?\n/).filter(l => l.trim());
 
   if (lines.length < 2) return [];
 
-  // Detect header
   const header = lines[0].split(';').map(h => h.trim().toLowerCase());
-  const col = name => header.indexOf(name);
+  const col = (name: string) => header.indexOf(name);
 
   const idCol = col('id');
   const dateCol = col('date');
@@ -137,11 +148,10 @@ export function parseStandardBankCSV(csvText) {
   const payMonthCol = col('paymonth');
   const amountCol = col('amount');
 
-  // Fallback column indices if header not found
-  const getField = (row, idx, fallback = '') =>
+  const getField = (row: string[], idx: number, fallback = '') =>
     idx >= 0 ? (row[idx] ?? fallback) : fallback;
 
-  const transactions = [];
+  const transactions: Transaction[] = [];
 
   for (let i = 1; i < lines.length; i++) {
     const parts = lines[i].split(';');
@@ -151,7 +161,6 @@ export function parseStandardBankCSV(csvText) {
     if (isNaN(rawAmount)) continue;
 
     const rawDate = getField(parts, dateCol, '').trim();
-    // Date format: "2026-06-09 00:00:00.0000000" → "2026-06-09"
     const date = rawDate.split(' ')[0];
 
     const description = getField(parts, descCol, '').trim();
@@ -161,7 +170,7 @@ export function parseStandardBankCSV(csvText) {
     if (!date || !description || !payMonth) continue;
 
     const isRecurring = detectRecurring(description, rawAmount);
-    const type = rawAmount > 0 ? 'Income' : 'Expense';
+    const type: Transaction['type'] = rawAmount > 0 ? 'Income' : 'Expense';
     const category = classifyCategory(description, rawAmount);
 
     transactions.push({ id, date, description, payMonth, amount: rawAmount, isRecurring, type, category });
@@ -170,7 +179,7 @@ export function parseStandardBankCSV(csvText) {
   return transactions;
 }
 
-export function extractPayMonths(transactions) {
+export function extractPayMonths(transactions: Transaction[]): string[] {
   const order = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const seen = new Set(transactions.map(t => t.payMonth));
   return [...seen].sort((a, b) => {

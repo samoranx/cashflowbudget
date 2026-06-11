@@ -2,53 +2,58 @@ import { useState, useMemo } from 'react';
 import TransactionTable from './TransactionTable';
 import CategoryDonut from './CategoryDonut';
 import { formatZAR } from '../utils/format';
+import type { Transaction, CategoryData } from '../types';
 
 const TABS = [
-  { id: 'debit-tx', label: 'Debit Orders' },
-  { id: 'debit-cat', label: 'Debit Categories' },
+  { id: 'debit-tx',   label: 'Debit Orders' },
+  { id: 'debit-cat',  label: 'Debit Categories' },
   { id: 'expense-tx', label: 'Expenses' },
-  { id: 'expense-cat', label: 'Expense Categories' },
-];
+  { id: 'expense-cat',label: 'Expense Categories' },
+] as const;
 
-function buildCategoryData(transactions) {
-  const map = {};
+type TabId = typeof TABS[number]['id'];
+
+function buildCategoryData(transactions: Transaction[]): CategoryData[] {
+  const map: Record<string, number> = {};
   transactions.forEach(tx => {
-    const key = tx.category;
-    map[key] = (map[key] || 0) + Math.abs(tx.amount);
+    map[tx.category] = (map[tx.category] ?? 0) + Math.abs(tx.amount);
   });
   return Object.entries(map)
     .map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }))
     .sort((a, b) => b.value - a.value);
 }
 
-export default function SpendingPanel({ transactions }) {
-  const [activeTab, setActiveTab] = useState('debit-tx');
+interface SpendingPanelProps {
+  transactions: Transaction[];
+}
+
+export default function SpendingPanel({ transactions }: SpendingPanelProps) {
+  const [activeTab, setActiveTab] = useState<TabId>('debit-tx');
 
   const debitOrders = useMemo(
     () => transactions.filter(t => t.isRecurring && t.type === 'Expense'),
-    [transactions]
+    [transactions],
   );
   const normalExpenses = useMemo(
     () => transactions.filter(t => !t.isRecurring && t.type === 'Expense'),
-    [transactions]
+    [transactions],
   );
   const debitCategories = useMemo(() => buildCategoryData(debitOrders), [debitOrders]);
   const expenseCategories = useMemo(() => buildCategoryData(normalExpenses), [normalExpenses]);
 
   const debitTotal = useMemo(
     () => debitOrders.reduce((s, t) => s + Math.abs(t.amount), 0),
-    [debitOrders]
+    [debitOrders],
   );
   const expenseTotal = useMemo(
     () => normalExpenses.reduce((s, t) => s + Math.abs(t.amount), 0),
-    [normalExpenses]
+    [normalExpenses],
   );
 
   const tabTotal = activeTab === 'debit-tx' ? debitTotal : activeTab === 'expense-tx' ? expenseTotal : null;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-      {/* Tab header */}
       <div className="flex items-center border-b border-gray-100 px-4 pt-4 gap-1 flex-wrap">
         <div className="flex gap-1 flex-1 flex-wrap">
           {TABS.map(tab => (
@@ -72,7 +77,6 @@ export default function SpendingPanel({ transactions }) {
         )}
       </div>
 
-      {/* Content */}
       <div className="flex-1 p-4">
         {activeTab === 'debit-tx' && (
           <TransactionTable transactions={debitOrders} emptyText="No debit orders this month" />

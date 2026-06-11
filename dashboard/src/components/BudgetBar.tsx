@@ -1,7 +1,12 @@
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { formatZAR } from '../utils/format';
 
-export default function BudgetBar({ totalExpenses, budget = 60000 }) {
+interface BudgetBarProps {
+  totalExpenses: number;
+  budget?: number;
+}
+
+export default function BudgetBar({ totalExpenses, budget = 60000 }: BudgetBarProps) {
   const pct = Math.round((totalExpenses / budget) * 100);
   const overspent = totalExpenses > budget;
   const barWidth = Math.min(pct, 100);
@@ -24,7 +29,6 @@ export default function BudgetBar({ totalExpenses, budget = 60000 }) {
         </span>
       </div>
 
-      {/* Progress bar track */}
       <div className="h-3 bg-gray-100 rounded-full overflow-hidden mb-3">
         <div
           className={`h-full rounded-full transition-all duration-700 ${overspent ? 'bg-red-500' : 'bg-emerald-500'}`}

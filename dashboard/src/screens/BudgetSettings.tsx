@@ -1,8 +1,18 @@
 import { useState, useMemo } from 'react';
 import { Target, RotateCcw, CheckCircle2, AlertTriangle, TrendingUp, TrendingDown, Pencil, Save } from 'lucide-react';
 import { formatZAR } from '../utils/format';
+import type { Transaction } from '../types';
 
-function MonthBudgetCard({ month, transactions, budget, onSave, onReset, defaultBudget }) {
+interface MonthBudgetCardProps {
+  month: string;
+  transactions: Transaction[];
+  budget: number;
+  defaultBudget: number;
+  onSave: (val: number) => void;
+  onReset: () => void;
+}
+
+function MonthBudgetCard({ month, transactions, budget, defaultBudget, onSave, onReset }: MonthBudgetCardProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [saved, setSaved] = useState(false);
@@ -29,7 +39,7 @@ function MonthBudgetCard({ month, transactions, budget, onSave, onReset, default
     setEditing(false);
   }
 
-  function handleKey(e) {
+  function handleKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') commit();
     if (e.key === 'Escape') setEditing(false);
   }
@@ -39,7 +49,6 @@ function MonthBudgetCard({ month, transactions, budget, onSave, onReset, default
 
   return (
     <div className={`bg-white rounded-2xl border shadow-sm p-5 transition-all hover:shadow-md ${over ? 'border-red-200' : 'border-gray-100'}`}>
-      {/* Month + badge */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-gray-800">{month}</span>
@@ -59,7 +68,6 @@ function MonthBudgetCard({ month, transactions, budget, onSave, onReset, default
         )}
       </div>
 
-      {/* Income / Expenses row */}
       <div className="grid grid-cols-2 gap-2 mb-4">
         <div className="bg-emerald-50 rounded-xl px-3 py-2">
           <p className="text-[10px] text-emerald-600 font-semibold uppercase tracking-wide flex items-center gap-1 mb-0.5">
@@ -75,7 +83,6 @@ function MonthBudgetCard({ month, transactions, budget, onSave, onReset, default
         </div>
       </div>
 
-      {/* Budget input */}
       <div className="mb-3">
         <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide block mb-1.5">
           Budget Goal
@@ -125,7 +132,6 @@ function MonthBudgetCard({ month, transactions, budget, onSave, onReset, default
         )}
       </div>
 
-      {/* Progress bar */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[10px] text-gray-400 font-medium">Spending progress</span>
@@ -141,12 +147,11 @@ function MonthBudgetCard({ month, transactions, budget, onSave, onReset, default
             style={{ width: `${barWidth}%` }}
           />
         </div>
-        {over && (
+        {over ? (
           <p className="text-[10px] text-red-500 font-semibold mt-1.5">
             Overspent by {formatZAR(expenses - budget)}
           </p>
-        )}
-        {!over && (
+        ) : (
           <p className="text-[10px] text-gray-400 mt-1.5">
             {formatZAR(budget - expenses)} remaining
           </p>
@@ -156,7 +161,17 @@ function MonthBudgetCard({ month, transactions, budget, onSave, onReset, default
   );
 }
 
-export default function BudgetSettings({ transactions, payMonths, getBudget, setMonthBudget, resetMonth, resetAll, DEFAULT_BUDGET }) {
+interface BudgetSettingsProps {
+  transactions: Transaction[];
+  payMonths: string[];
+  getBudget: (month: string) => number;
+  setMonthBudget: (month: string, value: number) => void;
+  resetMonth: (month: string) => void;
+  resetAll: () => void;
+  DEFAULT_BUDGET: number;
+}
+
+export default function BudgetSettings({ transactions, payMonths, getBudget, setMonthBudget, resetMonth, resetAll, DEFAULT_BUDGET }: BudgetSettingsProps) {
   const [globalDraft, setGlobalDraft] = useState('');
   const [globalEditing, setGlobalEditing] = useState(false);
   const [appliedAll, setAppliedAll] = useState(false);
@@ -173,14 +188,13 @@ export default function BudgetSettings({ transactions, payMonths, getBudget, set
   }
 
   const totalBudgeted = payMonths.reduce((s, m) => s + getBudget(m), 0);
-  const totalSpent    = useMemo(() => {
-    return Math.abs(transactions.filter(t => t.type === 'Expense').reduce((s, t) => s + t.amount, 0));
-  }, [transactions]);
+  const totalSpent = useMemo(
+    () => Math.abs(transactions.filter(t => t.type === 'Expense').reduce((s, t) => s + t.amount, 0)),
+    [transactions],
+  );
 
   return (
     <div className="flex-1 ml-16 p-6 min-h-screen">
-
-      {/* Page header */}
       <div className="flex items-start justify-between mb-6 flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -193,7 +207,6 @@ export default function BudgetSettings({ transactions, payMonths, getBudget, set
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Apply same budget to all months */}
           <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm">
             {globalEditing ? (
               <>
@@ -233,7 +246,6 @@ export default function BudgetSettings({ transactions, payMonths, getBudget, set
             )}
           </div>
 
-          {/* Reset all */}
           <button
             onClick={resetAll}
             className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-500 shadow-sm hover:bg-gray-50 hover:text-gray-700 transition-colors"
@@ -244,7 +256,6 @@ export default function BudgetSettings({ transactions, payMonths, getBudget, set
         </div>
       </div>
 
-      {/* Summary strip */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
           { label: 'Total Budgeted (all months)', value: totalBudgeted, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -258,7 +269,6 @@ export default function BudgetSettings({ transactions, payMonths, getBudget, set
         ))}
       </div>
 
-      {/* Month cards grid */}
       {payMonths.length === 0 ? (
         <div className="text-center py-20 text-gray-400 text-sm">No transaction data loaded yet.</div>
       ) : (

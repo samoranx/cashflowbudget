@@ -1,6 +1,12 @@
 import { formatZAR } from '../utils/format';
+import type { Transaction } from '../types';
 
-export default function TransactionTable({ transactions, emptyText = 'No transactions' }) {
+interface TransactionTableProps {
+  transactions: Transaction[];
+  emptyText?: string;
+}
+
+export default function TransactionTable({ transactions, emptyText = 'No transactions' }: TransactionTableProps) {
   if (!transactions.length) {
     return <p className="text-center text-sm text-gray-400 py-8">{emptyText}</p>;
   }

@@ -1,11 +1,15 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import type { CategoryData } from '../types';
 
 const COLORS = [
   '#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6',
   '#06b6d4', '#f97316', '#84cc16', '#ec4899', '#6366f1',
 ];
 
-const CustomTooltip = ({ active, payload }) => {
+interface TooltipEntry { name: string; value: number }
+interface CustomTooltipProps { active?: boolean; payload?: TooltipEntry[] }
+
+const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
   if (active && payload?.length) {
     const { name, value } = payload[0];
     return (
@@ -18,7 +22,11 @@ const CustomTooltip = ({ active, payload }) => {
   return null;
 };
 
-export default function CategoryDonut({ data }) {
+interface CategoryDonutProps {
+  data: CategoryData[];
+}
+
+export default function CategoryDonut({ data }: CategoryDonutProps) {
   if (!data.length) return <p className="text-center text-sm text-gray-400 py-8">No data</p>;
 
   return (
@@ -41,7 +49,7 @@ export default function CategoryDonut({ data }) {
         <Legend
           iconType="circle"
           iconSize={8}
-          formatter={(v) => <span className="text-xs text-gray-600">{v}</span>}
+          formatter={(v: string) => <span className="text-xs text-gray-600">{v}</span>}
         />
       </PieChart>
     </ResponsiveContainer>

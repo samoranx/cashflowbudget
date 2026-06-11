@@ -10,16 +10,18 @@ import BudgetSettings from './screens/BudgetSettings';
 import { useTransactions } from './hooks/useTransactions';
 import { useBudget } from './hooks/useBudget';
 
+type ScreenId = 'dashboard' | 'budget-settings' | 'transactions' | 'expenses';
+type ModalType = 'Income' | 'Expense';
+
 export default function App() {
   const { transactions, payMonths, loading, error, fileName, loadFromFile } = useTransactions();
   const { getBudget, setMonthBudget, resetMonth, resetAll, DEFAULT_BUDGET } = useBudget();
-  const [selectedMonth, setSelectedMonth] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [modal, setModal] = useState(null); // { type: 'Income' | 'Expense' }
-  const [activeScreen, setActiveScreen] = useState('dashboard');
-  const fileInputRef = useRef(null);
+  const [modal, setModal] = useState<{ type: ModalType } | null>(null);
+  const [activeScreen, setActiveScreen] = useState<ScreenId>('dashboard');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Default to the most recent month when data loads
   useEffect(() => {
     if (payMonths.length > 0) {
       setSelectedMonth(prev => prev && payMonths.includes(prev) ? prev : payMonths[payMonths.length - 1]);
@@ -28,22 +30,21 @@ export default function App() {
 
   const filtered = useMemo(
     () => transactions.filter(t => t.payMonth === selectedMonth),
-    [transactions, selectedMonth]
+    [transactions, selectedMonth],
   );
 
   const totalIncome = useMemo(
     () => filtered.filter(t => t.type === 'Income').reduce((s, t) => s + t.amount, 0),
-    [filtered]
+    [filtered],
   );
 
   const totalExpenses = useMemo(
     () => Math.abs(filtered.filter(t => t.type === 'Expense').reduce((s, t) => s + t.amount, 0)),
-    [filtered]
+    [filtered],
   );
 
   const netBalance = totalIncome - totalExpenses;
 
-  // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex min-h-screen bg-gray-100 items-center justify-center">
@@ -55,7 +56,6 @@ export default function App() {
     );
   }
 
-  // ── Error state ────────────────────────────────────────────────────────────
   if (error) {
     return (
       <div className="flex min-h-screen bg-gray-100 items-center justify-center">
@@ -66,7 +66,7 @@ export default function App() {
           <label className="inline-flex items-center gap-2 bg-emerald-500 text-white text-sm font-semibold px-4 py-2 rounded-xl cursor-pointer hover:bg-emerald-600 transition-colors">
             <Upload size={14} />
             Pick a CSV file
-            <input type="file" accept=".csv" className="hidden" onChange={e => loadFromFile(e.target.files[0])} />
+            <input type="file" accept=".csv" className="hidden" onChange={e => e.target.files?.[0] && loadFromFile(e.target.files[0])} />
           </label>
         </div>
       </div>
@@ -77,7 +77,6 @@ export default function App() {
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar activeScreen={activeScreen} onNavigate={setActiveScreen} />
 
-      {/* Budget Settings Screen */}
       {activeScreen === 'budget-settings' && (
         <BudgetSettings
           transactions={transactions}
@@ -90,11 +89,9 @@ export default function App() {
         />
       )}
 
-      {/* Dashboard Screen */}
       {activeScreen === 'dashboard' && (
         <main className="flex-1 ml-16 p-6 min-h-screen">
 
-          {/* Header */}
           <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <div>
               <h1 className="text-2xl font-bold text-gray-800">Financial Dashboard</h1>
@@ -102,7 +99,6 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* CSV loader */}
               <label
                 title={`Loaded: ${fileName}`}
                 className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-600 shadow-sm hover:bg-gray-50 cursor-pointer transition-colors"
@@ -114,11 +110,10 @@ export default function App() {
                   type="file"
                   accept=".csv"
                   className="hidden"
-                  onChange={e => loadFromFile(e.target.files[0])}
+                  onChange={e => e.target.files?.[0] && loadFromFile(e.target.files[0])}
                 />
               </label>
 
-              {/* Month selector */}
               <div className="relative">
                 <button
                   onClick={() => setDropdownOpen(o => !o)}
@@ -156,7 +151,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Metric cards */}
           <div className="flex gap-4 mb-6 flex-wrap">
             <MetricCard
               label="Total Income"
@@ -186,12 +180,10 @@ export default function App() {
             />
           </div>
 
-          {/* Budget bar */}
           <div className="mb-6">
-            <BudgetBar totalExpenses={totalExpenses} budget={getBudget(selectedMonth)} />
+            <BudgetBar totalExpenses={totalExpenses} budget={getBudget(selectedMonth ?? '')} />
           </div>
 
-          {/* Bottom: spending tabs + chart */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <SpendingPanel transactions={filtered} />
             <IncomeExpenseChart transactions={transactions} payMonths={payMonths} />
@@ -203,7 +195,6 @@ export default function App() {
         </main>
       )}
 
-      {/* Transaction drill-down modal */}
       {modal && (
         <TransactionModal
           type={modal.type}

@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { X, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { formatZAR } from '../utils/format';
+import type { Transaction } from '../types';
 
-const CATEGORY_COLORS = {
+const CATEGORY_COLORS: Record<string, string> = {
   'Income':             'bg-emerald-100 text-emerald-700',
   'Insurance & Loans':  'bg-purple-100 text-purple-700',
   'Education':          'bg-blue-100 text-blue-700',
@@ -20,7 +21,7 @@ const CATEGORY_COLORS = {
   'Other':              'bg-gray-100 text-gray-600',
 };
 
-function CategoryBadge({ category }) {
+function CategoryBadge({ category }: { category: string }) {
   const cls = CATEGORY_COLORS[category] ?? 'bg-gray-100 text-gray-600';
   return (
     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${cls}`}>
@@ -29,17 +30,22 @@ function CategoryBadge({ category }) {
   );
 }
 
-export default function TransactionModal({ type, month, transactions, onClose }) {
-  const overlayRef = useRef(null);
+interface TransactionModalProps {
+  type: 'Income' | 'Expense';
+  month: string | null;
+  transactions: Transaction[];
+  onClose: () => void;
+}
 
-  // Close on Escape
+export default function TransactionModal({ type, month, transactions, onClose }: TransactionModalProps) {
+  const overlayRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    const handler = e => { if (e.key === 'Escape') onClose(); };
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  // Prevent body scroll while open
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
@@ -53,8 +59,7 @@ export default function TransactionModal({ type, month, transactions, onClose })
   const RowIcon = isIncome ? ArrowUpRight : ArrowDownRight;
   const rowIconColor = isIncome ? 'text-emerald-500' : 'text-red-400';
 
-  // Sort by date descending
-  const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const sorted = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
     <div
@@ -65,7 +70,6 @@ export default function TransactionModal({ type, month, transactions, onClose })
     >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[85vh] animate-in">
 
-        {/* Header */}
         <div className={`${accentBg} rounded-t-2xl px-6 py-5 flex items-center justify-between flex-shrink-0`}>
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
@@ -94,7 +98,6 @@ export default function TransactionModal({ type, month, transactions, onClose })
           </div>
         </div>
 
-        {/* Table */}
         <div className="overflow-y-auto flex-1">
           {sorted.length === 0 ? (
             <p className="text-center text-sm text-gray-400 py-12">No transactions for this period</p>
@@ -109,7 +112,7 @@ export default function TransactionModal({ type, month, transactions, onClose })
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((tx, i) => (
+                {sorted.map(tx => (
                   <tr
                     key={tx.id}
                     className="border-b border-gray-50 hover:bg-gray-50/70 transition-colors"
@@ -134,7 +137,6 @@ export default function TransactionModal({ type, month, transactions, onClose })
                   </tr>
                 ))}
               </tbody>
-              {/* Sticky footer total */}
               <tfoot>
                 <tr className="sticky bottom-0 bg-gray-50 border-t-2 border-gray-200">
                   <td colSpan={2} className="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wide">

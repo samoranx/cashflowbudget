@@ -3,14 +3,18 @@ import {
   ResponsiveContainer, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, LabelList,
 } from 'recharts';
+import type { Transaction, ChartDataPoint } from '../types';
 
-function formatY(value) {
+function formatY(value: number): string {
   if (value >= 1_000_000) return `R${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `R${(value / 1_000).toFixed(0)}k`;
   return `R${value}`;
 }
 
-const CustomTooltip = ({ active, payload, label }) => {
+interface TooltipEntry { name: string; value: number; color: string }
+interface CustomTooltipProps { active?: boolean; payload?: TooltipEntry[]; label?: string }
+
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload?.length) {
     return (
       <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-lg text-xs">
@@ -26,7 +30,14 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-const renderLabel = ({ x, y, value, fill }) => {
+interface LabelProps {
+  x?: number;
+  y?: number;
+  value?: number;
+  fill: string;
+}
+
+const renderLabel = ({ x = 0, y = 0, value, fill }: LabelProps) => {
   if (!value) return null;
   return (
     <text x={x} y={y - 8} fill={fill} fontSize={9} fontWeight={700} textAnchor="middle">
@@ -35,12 +46,17 @@ const renderLabel = ({ x, y, value, fill }) => {
   );
 };
 
-export default function IncomeExpenseChart({ transactions, payMonths }) {
-  const chartData = useMemo(() => {
+interface IncomeExpenseChartProps {
+  transactions: Transaction[];
+  payMonths: string[];
+}
+
+export default function IncomeExpenseChart({ transactions, payMonths }: IncomeExpenseChartProps) {
+  const chartData = useMemo<ChartDataPoint[]>(() => {
     return payMonths.map(month => {
       const txs = transactions.filter(t => t.payMonth === month);
       return {
-        month: month.replace('-', '\n'),  // "Jun-26" → "Jun\n26" for two-line label
+        month: month.replace('-', '\n'),
         shortMonth: month.split('-')[0],
         income: txs.filter(t => t.type === 'Income').reduce((s, t) => s + t.amount, 0),
         expenses: Math.abs(txs.filter(t => t.type === 'Expense').reduce((s, t) => s + t.amount, 0)),
@@ -93,7 +109,7 @@ export default function IncomeExpenseChart({ transactions, payMonths }) {
             dot={{ fill: '#10b981', r: 4, strokeWidth: 0 }}
             activeDot={{ r: 6 }}
           >
-            <LabelList content={(props) => renderLabel({ ...props, fill: '#10b981' })} />
+            <LabelList content={(props) => renderLabel({ x: props.x as number, y: props.y as number, value: props.value as number, fill: '#10b981' })} />
           </Line>
           <Line
             type="monotone"
@@ -104,7 +120,7 @@ export default function IncomeExpenseChart({ transactions, payMonths }) {
             dot={{ fill: '#ef4444', r: 4, strokeWidth: 0 }}
             activeDot={{ r: 6 }}
           >
-            <LabelList content={(props) => renderLabel({ ...props, fill: '#ef4444' })} />
+            <LabelList content={(props) => renderLabel({ x: props.x as number, y: props.y as number, value: props.value as number, fill: '#ef4444' })} />
           </Line>
         </LineChart>
       </ResponsiveContainer>

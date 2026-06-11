@@ -1,33 +1,46 @@
 import { LayoutDashboard, Target, ArrowLeftRight, Receipt, LogOut, TrendingUp } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-const NAV_ITEMS = [
-  { id: 'dashboard',       icon: LayoutDashboard, label: 'Dashboard' },
-  { id: 'budget-settings', icon: Target,           label: 'Budget Goals' },
-  { id: 'transactions',    icon: ArrowLeftRight,   label: 'Transactions' },
-  { id: 'expenses',        icon: Receipt,          label: 'Expenses' },
+type ScreenId = 'dashboard' | 'budget-settings' | 'transactions' | 'expenses';
+
+interface NavItem {
+  id: ScreenId;
+  icon: LucideIcon;
+  label: string;
+  clickable: boolean;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { id: 'dashboard',       icon: LayoutDashboard, label: 'Dashboard',     clickable: true },
+  { id: 'budget-settings', icon: Target,           label: 'Budget Goals',  clickable: true },
+  { id: 'transactions',    icon: ArrowLeftRight,   label: 'Transactions',  clickable: false },
+  { id: 'expenses',        icon: Receipt,          label: 'Expenses',      clickable: false },
 ];
 
-export default function Sidebar({ activeScreen, onNavigate }) {
+interface SidebarProps {
+  activeScreen: ScreenId;
+  onNavigate: (id: ScreenId) => void;
+}
+
+export default function Sidebar({ activeScreen, onNavigate }: SidebarProps) {
   return (
     <aside className="fixed left-0 top-0 h-screen w-16 bg-slate-900 flex flex-col items-center py-6 gap-2 z-50 shadow-xl">
-      {/* Logo */}
       <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center mb-4 flex-shrink-0">
         <TrendingUp size={18} className="text-white" />
       </div>
 
       <nav className="flex flex-col gap-1 flex-1 w-full px-2">
-        {NAV_ITEMS.map(({ id, icon: Icon, label }) => {
+        {NAV_ITEMS.map(({ id, icon: Icon, label, clickable }) => {
           const isActive = activeScreen === id;
-          const isClickable = id === 'dashboard' || id === 'budget-settings';
           return (
             <button
               key={id}
               title={label}
-              onClick={() => isClickable && onNavigate(id)}
+              onClick={() => clickable && onNavigate(id)}
               className={`w-full h-10 rounded-xl flex items-center justify-center transition-colors ${
                 isActive
                   ? 'bg-emerald-500 text-white'
-                  : isClickable
+                  : clickable
                   ? 'text-slate-400 hover:bg-slate-700 hover:text-white cursor-pointer'
                   : 'text-slate-600 cursor-default'
               }`}

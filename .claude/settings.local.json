@@ -19,7 +19,8 @@
       "Bash(node -e \"import\\('/tmp/node_modules/playwright/index.mjs'\\).then\\(m => console.log\\('ok', Object.keys\\(m\\)\\)\\).catch\\(e => console.error\\('fail', e.message\\)\\)\")",
       "Bash(python3 -c \"import subprocess; r = subprocess.run\\(['cygpath', '-w', '/tmp'], capture_output=True, text=True\\); print\\(r.stdout\\)\")",
       "Bash(cygpath -w /tmp)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(npx tsc *)"
     ]
   }
 }

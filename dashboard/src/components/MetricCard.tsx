@@ -1,7 +1,18 @@
 import { ChevronRight } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { formatZAR } from '../utils/format';
 
-export default function MetricCard({ label, amount, icon: Icon, colorClass, bgClass, subLabel, onClick }) {
+interface MetricCardProps {
+  label: string;
+  amount: number;
+  icon: LucideIcon;
+  colorClass: string;
+  bgClass: string;
+  subLabel?: string;
+  onClick?: () => void;
+}
+
+export default function MetricCard({ label, amount, icon: Icon, colorClass, bgClass, subLabel, onClick }: MetricCardProps) {
   const clickable = typeof onClick === 'function';
   return (
     <div
