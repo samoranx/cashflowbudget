@@ -99,8 +99,9 @@ function classifyCategory(description, amount) {
   return 'Other';
 }
 
-function detectRecurring(description) {
+function detectRecurring(description, amount) {
   const d = description.toLowerCase();
+  const abs = Math.abs(amount);
   return (
     d.includes('insurance premium') || d.includes('bond repayment') ||
     d.includes('debicheck') || d.includes('sbsa hl') || d.includes('sbib-mobi') ||
@@ -110,7 +111,12 @@ function detectRecurring(description) {
     d.includes('service agreement mweb') || d.includes('telephone account telkom') ||
     d.includes('silveroaks') || d.includes('moment payco') ||
     d.includes('asset guarding') || d.includes('overdraft service fee') ||
-    d.includes('avbob') || d.includes('sbib-insurhop')
+    d.includes('avbob') || d.includes('sbib-insurhop') ||
+    // Named recurring transfers
+    d.includes('lesotho-home') ||
+    (d.includes('lynessa') || (d.includes('savu') && d.includes('piano'))) ||
+    ((d.includes('3 rivers') || d.includes('3rivers')) && abs >= 7000) ||
+    ((d.includes('blue hills') || d.includes('bluehills')) && abs >= 9000)
   );
 }
 
@@ -154,7 +160,7 @@ export function parseStandardBankCSV(csvText) {
 
     if (!date || !description || !payMonth) continue;
 
-    const isRecurring = detectRecurring(description);
+    const isRecurring = detectRecurring(description, rawAmount);
     const type = rawAmount > 0 ? 'Income' : 'Expense';
     const category = classifyCategory(description, rawAmount);
 
